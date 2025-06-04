@@ -6,7 +6,7 @@ from io import BytesIO
 st.set_page_config(page_title="PDF to Excel Converter", layout="centered")
 
 st.title("📄 PDF to Excel Converter")
-st.write("Téléchargez un PDF contenant des tableaux, et téléchargez les données sous forme de fichier Excel.")
+st.write("Téléchargez un PDF contenant des tableaux et téléchargez les données sous forme de fichier Excel.")
 
 uploaded_file = st.file_uploader("Choisir un fichier PDF", type=["pdf"])
 
@@ -29,7 +29,7 @@ def extract_tables_from_pdf(pdf_file):
             # Ajout de tous les tableaux extraits à la liste
             for table in page_tables:
                 if table:  # Si un tableau n'est pas vide
-                    # Supprimer les colonnes vides ou dupliquées
+                    # Nettoyer les données du tableau
                     table_cleaned = clean_table(table)
                     if table_cleaned:  # Ajouter seulement les tableaux non vides
                         df = pd.DataFrame(table_cleaned[1:], columns=table_cleaned[0])  # Première ligne comme en-tête
@@ -47,15 +47,18 @@ def clean_table(table):
     """
     Fonction pour nettoyer les tables extraites en supprimant les colonnes vides ou dupliquées.
     """
-    # Supprimer les colonnes vides et dupliquées
+    cleaned_table = []
+    
+    # Supprimer les colonnes vides ou dupliquées
     columns = table[0]
     cleaned_columns = [col if col != '' else f'Column_{i+1}' for i, col in enumerate(columns)]
+    table[0] = cleaned_columns  # Remplacer les noms de colonnes vides par des noms génériques
     
-    # Remplacer les colonnes vides par des noms génériques (Column_1, Column_2, etc.)
-    table[0] = cleaned_columns
-    
-    # Filtrer les lignes vides
-    cleaned_table = [row for row in table if any(cell.strip() for cell in row)]
+    # Filtrer les lignes vides et vérifier que les cellules ne sont pas 'None' ou vides
+    for row in table:
+        cleaned_row = [cell.strip() if cell and isinstance(cell, str) else cell for cell in row]  # Nettoyer chaque cellule
+        if any(cleaned_row):  # Garder la ligne si elle n'est pas vide
+            cleaned_table.append(cleaned_row)
     
     return cleaned_table
 
@@ -88,6 +91,7 @@ if uploaded_file:
             st.warning("Aucun tableau n'a été trouvé dans le PDF.")
     except Exception as e:
         st.error(f"Une erreur est survenue : {str(e)}")
+
 
 
 
