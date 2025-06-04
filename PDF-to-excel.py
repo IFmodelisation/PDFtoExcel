@@ -91,10 +91,9 @@ if uploaded_file:
                 label="📥 Télécharger le fichier Excel",
                 data=excel_file,
                 file_name="extracted_data.xlsx",
-                mime="application/vnd.openxmlformats-officedocument
-
-            
-
-
-
-
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+        else:
+            st.warning("Aucun tableau n'a été trouvé dans le PDF.")
+    except Exception as e:
+        st.error(f"Une erreur est survenue : {str(e)}")
