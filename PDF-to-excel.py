@@ -6,46 +6,46 @@ from io import BytesIO
 st.set_page_config(page_title="PDF to Excel Converter", layout="centered")
 
 st.title("📄 PDF to Excel Converter")
-st.markdown("Upload a PDF file, and we'll extract tables and convert them to an Excel file with correct number formatting.")
+st.write("Upload a PDF containing tables, and download the data as an Excel file.")
 
-uploaded_file = st.file_uploader("Upload a PDF file", type=["pdf"])
+uploaded_file = st.file_uploader("Choose a PDF file", type=["pdf"])
 
-def convert_pdf_to_dfs(file):
-    all_tables = []
-    with pdfplumber.open(file) as pdf:
-        for page_num, page in enumerate(pdf.pages, start=1):
-            tables = page.extract_tables()
-            for table in tables:
-                if table:  # skip empty
+def extract_tables_from_pdf(pdf_file):
+    tables = []
+    with pdfplumber.open(pdf_file) as pdf:
+        for i, page in enumerate(pdf.pages):
+            page_tables = page.extract_tables()
+            for table in page_tables:
+                if table:
                     df = pd.DataFrame(table[1:], columns=table[0])
-                    df = clean_and_convert_dataframe(df)
-                    df.insert(0, 'Page', page_num)
-                    all_tables.append(df)
-    return all_tables
+                    df = clean_data(df)
+                    df.insert(0, "Page", i + 1)
+                    tables.append(df)
+    return tables
 
-def clean_and_convert_dataframe(df):
-    # Strip whitespaces and convert numeric values
+def clean_data(df):
     for col in df.columns:
-        df[col] = df[col].str.replace(',', '').str.strip()  # Remove commas from numbers
-        df[col] = pd.to_numeric(df[col], errors='ignore')   # Convert to numeric if possible
+        df[col] = df[col].str.replace(",", "").str.strip()
+        df[col] = pd.to_numeric(df[col], errors="ignore")
     return df
 
-def create_excel_file(dfs):
+def save_tables_to_excel(tables):
     output = BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        for i, df in enumerate(dfs):
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        for i, df in enumerate(tables):
             sheet_name = f"Table_{i+1}"
-            df.to_excel(writer, index=False, sheet_name=sheet_name)
+            df.to_excel(writer, sheet_name=sheet_name, index=False)
     output.seek(0)
     return output
 
 if uploaded_file:
-    with st.spinner("Extracting data from PDF..."):
-        tables = convert_pdf_to_dfs(uploaded_file)
+    st.info("Processing PDF...")
+    tables = extract_tables_from_pdf(uploaded_file)
 
     if tables:
-        excel_file = create_excel_file(tables)
-        st.success("Data extracted and converted to Excel!")
+        excel_file = save_tables_to_excel(tables)
+
+        st.success("Tables extracted and Excel file ready!")
 
         st.download_button(
             label="📥 Download Excel File",
@@ -54,4 +54,5 @@ if uploaded_file:
             mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
         )
     else:
-        st.warning("No tables found in the uploaded PDF.")
+        st.warning("No tables found in the PDF.")
+
