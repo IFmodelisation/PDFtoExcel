@@ -1,65 +1,55 @@
-import streamlit as st
 import camelot
 import pandas as pd
-import io
+import streamlit as st
 
-# Function to extract tables from PDF using Camelot
-def extract_tables_from_pdf(pdf_file):
-    # Use Camelot to read the tables from the PDF
-    tables = camelot.read_pdf(pdf_file, pages='all', flavor='stream')
-    
-    # If tables were found, convert them to DataFrames
-    if len(tables) > 0:
-        dfs = [table.df for table in tables]
-        return dfs
-    else:
-        return None
+# Streamlit file uploader
+st.title("PDF Table Extraction to Excel")
+st.markdown("Upload a PDF file to extract tables and save as an Excel file.")
 
-# Function to save DataFrames to Excel
-def save_to_excel(dfs):
-    # Create a BytesIO object to hold the Excel file in memory
-    output = io.BytesIO()
-    with pd.ExcelWriter(output, engine='openpyxl') as writer:
-        for i, df in enumerate(dfs):
-            df.to_excel(writer, sheet_name=f"Table_{i+1}", index=False)
-    output.seek(0)
-    return output
+# File upload widget
+uploaded_file = st.file_uploader("Choose a PDF file", type="pdf")
 
-# Streamlit App
-def main():
-    st.title("PDF to Excel Converter with Camelot")
-    
-    # Allow the user to upload a PDF file
-    uploaded_file = st.file_uploader("Upload your PDF file", type=["pdf"])
-    
-    if uploaded_file is not None:
-        # Show a loading message while extracting data
-        st.write("Extracting tables from PDF...")
-        
-        # Extract tables using Camelot
-        tables = extract_tables_from_pdf(uploaded_file)
-        
+# Process the PDF if a file is uploaded
+if uploaded_file is not None:
+    try:
+        # Use Camelot to extract tables from the uploaded PDF
+        st.write("Extracting tables from the uploaded PDF...")
+        tables = camelot.read_pdf(uploaded_file, pages='all', flavor='stream')
+
+        # Check if tables were extracted
         if tables:
-            # Show extracted tables
-            st.write(f"Found {len(tables)} tables in the PDF.")
-            for i, table in enumerate(tables):
-                st.subheader(f"Table {i+1}")
-                st.dataframe(table)  # Display the table as a dataframe
+            st.write(f"Found {len(tables)} tables.")
             
-            # Provide the option to download the extracted data as an Excel file
-            st.write("Click below to download the tables as an Excel file:")
-            excel_file = save_to_excel(tables)
-            st.download_button(
-                label="Download Excel",
-                data=excel_file,
-                file_name="extracted_tables.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
+            # Convert extracted tables into a list of DataFrames (one for each table)
+            table_data = [table.df for table in tables]
+
+            # Display the first table in the Streamlit app
+            st.write("Here is the first extracted table:")
+            st.dataframe(table_data[0])
+
+            # Option to download as Excel
+            st.write("Saving tables to Excel...")
+
+            # Save all tables to Excel
+            with pd.ExcelWriter("extracted_tables.xlsx", engine="openpyxl") as writer:
+                for idx, table_df in enumerate(table_data):
+                    table_df.to_excel(writer, sheet_name=f'Table_{idx + 1}', index=False)
+            
+            # Read the generated Excel file and make it available for download
+            with open("extracted_tables.xlsx", "rb") as file:
+                st.download_button(
+                    label="Download the Excel file",
+                    data=file,
+                    file_name="extracted_tables.xlsx",
+                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                )
         else:
-            st.write("No tables found in the PDF.")
-            
-if __name__ == "__main__":
-    main()
+            st.error("No tables found in the PDF.")
+
+    except Exception as e:
+        st.error(f"An error occurred while processing the PDF: {e}")
+
+
 
 
 
