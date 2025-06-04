@@ -26,6 +26,11 @@ def extract_tables_from_pdf(pdf_file):
             if page_tables:
                 st.write(f"{len(page_tables)} tableaux trouvés sur la page {i+1}.")
             
+            # Afficher chaque tableau brut extrait pour analyse
+            for table in page_tables:
+                st.write(f"Tableau brut extrait de la page {i+1}:")
+                st.write(table)
+            
             # Ajout de tous les tableaux extraits à la liste
             for table in page_tables:
                 if table:  # Si un tableau n'est pas vide
@@ -56,7 +61,8 @@ def clean_table(table):
     
     # Filtrer les lignes vides et vérifier que les cellules ne sont pas 'None' ou vides
     for row in table:
-        cleaned_row = [cell.strip() if cell and isinstance(cell, str) else cell for cell in row]  # Nettoyer chaque cellule
+        # Nettoyer les cellules : en cas de None, les laisser vides
+        cleaned_row = [cell.strip() if isinstance(cell, str) else cell for cell in row]  # Nettoyer chaque cellule
         if any(cleaned_row):  # Garder la ligne si elle n'est pas vide
             cleaned_table.append(cleaned_row)
     
@@ -85,12 +91,9 @@ if uploaded_file:
                 label="📥 Télécharger le fichier Excel",
                 data=excel_file,
                 file_name="extracted_data.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
-        else:
-            st.warning("Aucun tableau n'a été trouvé dans le PDF.")
-    except Exception as e:
-        st.error(f"Une erreur est survenue : {str(e)}")
+                mime="application/vnd.openxmlformats-officedocument
+
+            
 
 
 
