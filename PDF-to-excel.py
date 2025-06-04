@@ -26,11 +26,12 @@ def extract_tables_from_pdf(pdf_file):
 def clean_data(df):
     # Iterate through each column and clean the data
     for col in df.columns:
-        # Make sure we can safely apply string methods
+        # Ensure the column values are strings before applying string methods
         df[col] = df[col].apply(lambda x: str(x).replace(",", "").strip() if isinstance(x, str) else x)
-        
-        # Convert numeric columns
+
+        # If it's a numeric value, we convert it to the appropriate numeric type
         df[col] = pd.to_numeric(df[col], errors="ignore")
+    
     return df
 
 def save_tables_to_excel(tables):
@@ -62,5 +63,6 @@ if uploaded_file:
             st.warning("No tables found in the PDF.")
     except Exception as e:
         st.error(f"An error occurred: {str(e)}")
+
 
 
