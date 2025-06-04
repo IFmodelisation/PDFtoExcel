@@ -1,67 +1,65 @@
 import streamlit as st
 import camelot
 import pandas as pd
-from io import BytesIO
+import io
 
-# Configuration Streamlit
-st.set_page_config(page_title="PDF to Excel Converter with Camelot", layout="centered")
-
-st.title("📄 PDF to Excel Converter (Camelot)")
-st.write("Téléchargez un PDF contenant des tableaux financiers et téléchargez les données sous forme de fichier Excel.")
-
-# File uploader for PDF
-uploaded_file = st.file_uploader("Choisir un fichier PDF", type=["pdf"])
-
+# Function to extract tables from PDF using Camelot
 def extract_tables_from_pdf(pdf_file):
-    try:
-        # Use Camelot to read the PDF and extract tables
-        tables = camelot.read_pdf(pdf_file, pages="all", flavor="stream", edge_tol=500)
-        
-        if not tables:
-            raise ValueError("Aucun tableau trouvé dans le PDF.")
-        
-        # Debug: Show how many tables were extracted
-        st.write(f"{len(tables)} tableau(x) trouvé(s) dans le PDF.")
-        
-        # If tables are found, return them as a list of DataFrames
-        return [table.df for table in tables]
+    # Use Camelot to read the tables from the PDF
+    tables = camelot.read_pdf(pdf_file, pages='all', flavor='stream')
     
-    except Exception as e:
-        st.error(f"Erreur lors de l'extraction des tableaux : {str(e)}")
-        return []
+    # If tables were found, convert them to DataFrames
+    if len(tables) > 0:
+        dfs = [table.df for table in tables]
+        return dfs
+    else:
+        return None
 
-def save_tables_to_excel(tables):
-    output = BytesIO()
-    with pd.ExcelWriter(output, engine="openpyxl") as writer:
-        for i, df in enumerate(tables):
-            sheet_name = f"Table_{i+1}"
-            df.to_excel(writer, sheet_name=sheet_name, index=False)
+# Function to save DataFrames to Excel
+def save_to_excel(dfs):
+    # Create a BytesIO object to hold the Excel file in memory
+    output = io.BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        for i, df in enumerate(dfs):
+            df.to_excel(writer, sheet_name=f"Table_{i+1}", index=False)
     output.seek(0)
     return output
 
-if uploaded_file:
-    st.info("Traitement du PDF...")
-    try:
+# Streamlit App
+def main():
+    st.title("PDF to Excel Converter with Camelot")
+    
+    # Allow the user to upload a PDF file
+    uploaded_file = st.file_uploader("Upload your PDF file", type=["pdf"])
+    
+    if uploaded_file is not None:
+        # Show a loading message while extracting data
+        st.write("Extracting tables from PDF...")
+        
         # Extract tables using Camelot
         tables = extract_tables_from_pdf(uploaded_file)
-
+        
         if tables:
-            # Save extracted tables into an Excel file
-            excel_file = save_tables_to_excel(tables)
-
-            st.success("Les tableaux ont été extraits et le fichier Excel est prêt!")
-
-            # Add download button for the Excel file
+            # Show extracted tables
+            st.write(f"Found {len(tables)} tables in the PDF.")
+            for i, table in enumerate(tables):
+                st.subheader(f"Table {i+1}")
+                st.dataframe(table)  # Display the table as a dataframe
+            
+            # Provide the option to download the extracted data as an Excel file
+            st.write("Click below to download the tables as an Excel file:")
+            excel_file = save_to_excel(tables)
             st.download_button(
-                label="📥 Télécharger le fichier Excel",
+                label="Download Excel",
                 data=excel_file,
-                file_name="extracted_data.xlsx",
+                file_name="extracted_tables.xlsx",
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             )
         else:
-            st.warning("Aucun tableau n'a été trouvé dans le PDF.")
-    except Exception as e:
-        st.error(f"Une erreur est survenue : {str(e)}")
+            st.write("No tables found in the PDF.")
+            
+if __name__ == "__main__":
+    main()
 
 
 
