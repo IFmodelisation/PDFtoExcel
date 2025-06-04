@@ -24,8 +24,12 @@ def extract_tables_from_pdf(pdf_file):
     return tables
 
 def clean_data(df):
+    # Iterate through each column and clean the data
     for col in df.columns:
-        df[col] = df[col].str.replace(",", "").str.strip()
+        # Make sure we can safely apply string methods
+        df[col] = df[col].apply(lambda x: str(x).replace(",", "").strip() if isinstance(x, str) else x)
+        
+        # Convert numeric columns
         df[col] = pd.to_numeric(df[col], errors="ignore")
     return df
 
@@ -40,19 +44,23 @@ def save_tables_to_excel(tables):
 
 if uploaded_file:
     st.info("Processing PDF...")
-    tables = extract_tables_from_pdf(uploaded_file)
+    try:
+        tables = extract_tables_from_pdf(uploaded_file)
 
-    if tables:
-        excel_file = save_tables_to_excel(tables)
+        if tables:
+            excel_file = save_tables_to_excel(tables)
 
-        st.success("Tables extracted and Excel file ready!")
+            st.success("Tables extracted and Excel file ready!")
 
-        st.download_button(
-            label="📥 Download Excel File",
-            data=excel_file,
-            file_name="extracted_data.xlsx",
-            mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-        )
-    else:
-        st.warning("No tables found in the PDF.")
+            st.download_button(
+                label="📥 Download Excel File",
+                data=excel_file,
+                file_name="extracted_data.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+        else:
+            st.warning("No tables found in the PDF.")
+    except Exception as e:
+        st.error(f"An error occurred: {str(e)}")
+
 
