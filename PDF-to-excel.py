@@ -20,9 +20,16 @@ def extract_tables_from_pdf(pdf_file):
             page_text = page.extract_text()
             st.text_area(f"Texte extrait de la page {i+1}", page_text, height=200)
 
-            # Extraire les tables de la page avec des paramètres d'extraction ajustés
-            page_tables = page.extract_tables(table_settings={"vertical_strategy": "lines", "horizontal_strategy": "lines"})
-            
+            # Extraire les tables avec un réglage de détection amélioré
+            page_tables = page.extract_tables(
+                table_settings={
+                    "vertical_strategy": "text",  # Utiliser la stratégie de texte pour détecter les lignes de texte
+                    "horizontal_strategy": "text",  # Utiliser la stratégie de texte pour détecter les colonnes
+                    "snap_tolerance": 3,  # Ajustement de la tolérance de capture des lignes et colonnes
+                }
+            )
+
+            # Afficher le nombre de tableaux trouvés
             if page_tables:
                 st.write(f"{len(page_tables)} tableaux trouvés sur la page {i+1}.")
             
@@ -30,8 +37,8 @@ def extract_tables_from_pdf(pdf_file):
             for table in page_tables:
                 st.write(f"Tableau brut extrait de la page {i+1}:")
                 st.write(table)
-            
-            # Ajout de tous les tableaux extraits à la liste
+
+            # Ajouter de nouveaux tableaux extraits à la liste
             for table in page_tables:
                 if table:  # Si un tableau n'est pas vide
                     # Nettoyer les données du tableau
@@ -40,8 +47,8 @@ def extract_tables_from_pdf(pdf_file):
                         df = pd.DataFrame(table_cleaned[1:], columns=table_cleaned[0])  # Première ligne comme en-tête
                         df.insert(0, "Page", i + 1)  # Ajout de la colonne de la page
                         tables.append(df)
-            
-            # Pour voir si les tableaux sont mal extraits, on affiche une petite portion de chaque tableau
+
+            # Afficher un exemple du dernier tableau extrait
             if tables:
                 st.write(f"Exemple de tableau extrait de la page {i+1}:")
                 st.write(tables[-1].head())  # Affiche les premières lignes du dernier tableau extrait
@@ -54,15 +61,13 @@ def clean_table(table):
     """
     cleaned_table = []
     
-    # Supprimer les colonnes vides ou dupliquées
+    # Vérifier et nettoyer les lignes
     columns = table[0]
     cleaned_columns = [col if col != '' else f'Column_{i+1}' for i, col in enumerate(columns)]
     table[0] = cleaned_columns  # Remplacer les noms de colonnes vides par des noms génériques
     
-    # Filtrer les lignes vides et vérifier que les cellules ne sont pas 'None' ou vides
     for row in table:
-        # Nettoyer les cellules : en cas de None, les laisser vides
-        cleaned_row = [cell.strip() if isinstance(cell, str) else cell for cell in row]  # Nettoyer chaque cellule
+        cleaned_row = [cell.strip() if isinstance(cell, str) else cell for cell in row]  # Nettoyer les cellules
         if any(cleaned_row):  # Garder la ligne si elle n'est pas vide
             cleaned_table.append(cleaned_row)
     
