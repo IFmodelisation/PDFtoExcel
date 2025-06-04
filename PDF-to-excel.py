@@ -18,8 +18,37 @@ def extract_tables_from_pdf(pdf_file):
             for table in page_tables:
                 if table:
                     # Directly create the DataFrame without any data cleaning
-                    df = pd.DataFrame(table
+                    df = pd.DataFrame(table[1:], columns=table[0])
+                    df.insert(0, "Page", i + 1)  # Adding a column to indicate the page number
+                    tables.append(df)
+    return tables
 
+def save_tables_to_excel(tables):
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine="openpyxl") as writer:
+        for i, df in enumerate(tables):
+            sheet_name = f"Table_{i+1}"
+            df.to_excel(writer, sheet_name=sheet_name, index=False)
+    output.seek(0)
+    return output
 
+if uploaded_file:
+    st.info("Processing PDF...")
+    try:
+        tables = extract_tables_from_pdf(uploaded_file)
 
+        if tables:
+            excel_file = save_tables_to_excel(tables)
 
+            st.success("Tables extracted and Excel file ready!")
+
+            st.download_button(
+                label="📥 Download Excel File",
+                data=excel_file,
+                file_name="extracted_data.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+        else:
+            st.warning("No tables found in the PDF.")
+    except Exception as e:
+        st.error(f"An error occurred: {str(e)}")
