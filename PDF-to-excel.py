@@ -17,52 +17,9 @@ def extract_tables_from_pdf(pdf_file):
             page_tables = page.extract_tables()
             for table in page_tables:
                 if table:
-                    df = pd.DataFrame(table[1:], columns=table[0])
-                    df = clean_data(df)
-                    df.insert(0, "Page", i + 1)
-                    tables.append(df)
-    return tables
+                    # Directly create the DataFrame without any data cleaning
+                    df = pd.DataFrame(table
 
-def clean_data(df):
-    # Iterate through each column and clean the data
-    for col in df.columns:
-        # Ensure the column values are strings before applying string methods
-        df[col] = df[col].apply(lambda x: str(x).replace(",", "").strip() if isinstance(x, str) else x)
-
-        # If it's a numeric value, we convert it to the appropriate numeric type
-        df[col] = pd.to_numeric(df[col], errors="ignore")
-    
-    return df
-
-def save_tables_to_excel(tables):
-    output = BytesIO()
-    with pd.ExcelWriter(output, engine="openpyxl") as writer:
-        for i, df in enumerate(tables):
-            sheet_name = f"Table_{i+1}"
-            df.to_excel(writer, sheet_name=sheet_name, index=False)
-    output.seek(0)
-    return output
-
-if uploaded_file:
-    st.info("Processing PDF...")
-    try:
-        tables = extract_tables_from_pdf(uploaded_file)
-
-        if tables:
-            excel_file = save_tables_to_excel(tables)
-
-            st.success("Tables extracted and Excel file ready!")
-
-            st.download_button(
-                label="📥 Download Excel File",
-                data=excel_file,
-                file_name="extracted_data.xlsx",
-                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-            )
-        else:
-            st.warning("No tables found in the PDF.")
-    except Exception as e:
-        st.error(f"An error occurred: {str(e)}")
 
 
 
