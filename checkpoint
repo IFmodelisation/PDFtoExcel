@@ -1,0 +1,61 @@
+import streamlit as st
+import camelot
+import pandas as pd
+from io import BytesIO
+
+# Function to convert PDF to Excel
+def pdf_to_excel(pdf_file):
+    # Use Camelot to extract tables
+    tables = camelot.read_pdf(pdf_file, pages='all', flavor='stream')
+
+    if len(tables) == 0:
+        return None
+
+    # Convert tables to pandas DataFrame
+    data_frames = [table.df for table in tables]
+
+    # Combine all dataframes into one
+    combined_df = pd.concat(data_frames, ignore_index=True)
+
+    # Remove any unwanted empty rows or columns
+    combined_df = combined_df.dropna(how='all', axis=0)
+    combined_df = combined_df.dropna(how='all', axis=1)
+
+    # Convert numeric columns to numbers
+    for col in combined_df.columns:
+        combined_df[col] = pd.to_numeric(combined_df[col], errors='ignore')
+
+    # Save to Excel
+    output = BytesIO()
+    with pd.ExcelWriter(output, engine='openpyxl') as writer:
+        combined_df.to_excel(writer, index=False, sheet_name='Sheet1')
+    output.seek(0)
+
+    return output
+
+# Streamlit Interface
+def main():
+    st.title('PDF to Excel Converter')
+
+    st.write("Upload a PDF to extract tables and save as an Excel file")
+
+    pdf_file = st.file_uploader("Choose a PDF", type="pdf")
+
+    if pdf_file is not None:
+        st.write("Extracting tables from the PDF...")
+
+        output = pdf_to_excel(pdf_file)
+
+        if output:
+            st.write("Tables extracted successfully!")
+            st.download_button(
+                label="Download Excel file",
+                data=output,
+                file_name="output.xlsx",
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            )
+        else:
+            st.error("No tables found in the PDF!")
+
+if __name__ == "__main__":
+    main()
